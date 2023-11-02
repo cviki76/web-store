@@ -1,0 +1,8 @@
+docker swarm init
+
+docker stack deploy --compose-file stack.yaml projekat
+
+docker stack services projekat
+
+docker stack rm projekat
+

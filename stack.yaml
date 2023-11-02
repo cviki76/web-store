@@ -1,0 +1,129 @@
+version: '3'
+
+services:
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    networks:
+      - authenticationDBNetwork
+      - applicationDBNetwork
+  authenticationDB:
+    image: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    healthcheck:
+      test: ["CMD","mysqladmin","ping","-h","localhost"]
+      timeout: 10s
+      retries: 10
+    volumes:
+      - authenticationDBdata:/var/lib/mysql
+    networks:
+      - authenticationDBNetwork
+  authenticationDBMigration:
+    image: authenticationdbmigration
+    environment:
+      - DATABASE_URL=authenticationDB
+    networks:
+      - authenticationDBNetwork
+  authentication:
+    image: authentication
+    environment:
+      - DATABASE_URL=authenticationDB
+    ports:
+      - 5002:5002
+    networks:
+      - authenticationDBNetwork
+
+
+
+  applicationDB:
+    image: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    healthcheck:
+      test: [ "CMD","mysqladmin","ping","-h","localhost" ]
+      timeout: 10s
+      retries: 10
+    volumes:
+      - applicationDBdata:/var/lib/mysql
+    networks:
+      - applicationDBNetwork
+      - daemonDBNetwork
+      - adminNetwork
+      - buyerNetwork
+  applicationDBMigration:
+    image: applicationdbmigration
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    networks:
+      - applicationDBNetwork
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    networks:
+      - warehousemanNetwork
+      - daemonNetwork
+  daemon:
+    image: daemon
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    ports:
+      - 5005:5005
+    networks:
+      - daemonNetwork
+      - daemonDBNetwork
+  warehouseman:
+    image: warehouseman
+    deploy:
+      replicas: 3
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    ports:
+      - 5003:5003
+    networks:
+      - warehousemanNetwork
+  buyer:
+    image: buyer
+    deploy:
+      replicas: 3
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    ports:
+      - 5001:5001
+    networks:
+      - buyerNetwork
+  admin:
+    image: admin
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    ports:
+      - 5006:5006
+    networks:
+      - adminNetwork
+
+volumes:
+  authenticationDBdata:
+  applicationDBdata:
+
+networks:
+  authenticationDBNetwork:
+    driver: overlay
+  applicationDBNetwork:
+    driver: overlay
+  adminNetwork:
+    driver: overlay
+  warehousemanNetwork:
+    driver: overlay
+  buyerNetwork:
+    driver: overlay
+  daemonNetwork:
+    driver: overlay
+  daemonDBNetwork:
+    driver: overlay

@@ -1,0 +1,141 @@
+version: '3'
+
+services:
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    networks:
+      - authenticationDBNetwork
+      - applicationDBNetwork
+  authenticationDB:
+    image: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    healthcheck:
+      test: ["CMD","mysqladmin","ping","-h","localhost"]
+      timeout: 10s
+      retries: 10
+    volumes:
+      - authenticationDBdata:/var/lib/mysql
+    networks:
+      - authenticationDBNetwork
+  authenticationDBMigration:
+    image: authenticationdbmigration
+    environment:
+      - DATABASE_URL=authenticationDB
+    depends_on:
+      authenticationDB:
+        condition: service_healthy
+    networks:
+      - authenticationDBNetwork
+  authentication:
+    image: authentication
+    environment:
+      - DATABASE_URL=authenticationDB
+    depends_on:
+      - authenticationDBMigration
+    ports:
+      - 5002:5002
+    networks:
+      - authenticationDBNetwork
+
+
+
+  applicationDB:
+    image: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    healthcheck:
+      test: [ "CMD","mysqladmin","ping","-h","localhost" ]
+      timeout: 10s
+      retries: 10
+    volumes:
+      - applicationDBdata:/var/lib/mysql
+    networks:
+      - applicationDBNetwork
+      - daemonNet
+      - adminNet
+      - buyerNet
+  applicationDBMigration:
+    image: applicationdbmigration
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    depends_on:
+      applicationDB:
+        condition: service_healthy
+    networks:
+      - applicationDBNetwork
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    networks:
+      - warehousemanNetwork
+      - daemonNet
+  daemon:
+    image: daemon
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    ports:
+      - 5005:5005
+    depends_on:
+      - applicationDBMigration
+      - redis
+      - authenticationDBMigration
+    networks:
+      - warehousemanNetwork
+      - daemonNet
+      - applicationDBNetwork
+  warehouseman:
+    image: warehouseman
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    ports:
+      - 5003:5003
+    depends_on:
+      - applicationDBMigration
+      - redis
+      - authenticationDBMigration
+    networks:
+      - warehousemanNetwork
+  buyer:
+    image: buyer
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    ports:
+      - 5001:5001
+    depends_on:
+      - applicationDBMigration
+      - redis
+      - authenticationDBMigration
+    networks:
+      - buyerNet
+  admin:
+    image: admin
+    environment:
+      - DATABASE_URL=applicationDB
+      - REDIS_URL=redis
+    ports:
+      - 5006:5006
+    depends_on:
+      - applicationDBMigration
+      - authenticationDBMigration
+    networks:
+      - adminNet
+
+volumes:
+  authenticationDBdata:
+  applicationDBdata:
+
+networks:
+  authenticationDBNetwork:
+  applicationDBNetwork:
+  adminNet:
+  warehousemanNet:
+  buyerNet:
+  daemonNet:
