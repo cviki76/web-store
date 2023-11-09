@@ -1,5 +1,7 @@
 # WebStore
 
+Application for customer, buyer, warehouseman and admin relations.
+
 Testing commands:
 
 python main.py --type authentication --authentication-address http://127.0.0.1:5002 --jwt-secret JWT_SECRET_KEY --roles-field roles --administrator-role admin --customer-role buyer --warehouse-role warehouseman
