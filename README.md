@@ -1,4 +1,4 @@
-# WebStore
+# web-store
 
 Application for customer, buyer, warehouseman and admin relations.
 
